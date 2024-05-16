@@ -7,9 +7,15 @@ n_msa = 15
 seq_len = 31
 d_msa = 29
 d_pair = 13
+n_diff = 7
+d_token = 17
+d_cond = 19
 
 m = torch.randn(*bshape, n_msa, seq_len, d_msa)
 z = torch.randn(*bshape, seq_len, seq_len, d_pair)
+
+a = torch.randn(n_diff, *bshape, seq_len, d_token)
+s = torch.randn(*bshape, seq_len, d_cond)
 
 print("alg10 pair avg weighting ...")
 paw_layer = M.PairAverageWeighting(d_msa, d_pair, d_hid=7, num_heads=3)
@@ -56,3 +62,16 @@ assert t_emb.shape == (*t.shape, 257), t_emb
 t_emb.sum().backward()
 del fourier_emb, t_emb
 
+print("alg25 cond trans blk")
+cond_trans_blk = DM.ConditionalTransitionBlock(d_token, d_cond)
+_a = cond_trans_blk(a, s[None])
+assert _a.shape == a.shape, _a.shape
+_a.sum().backward()
+del cond_trans_blk, _a
+
+print("alg26 adaln")
+adaln = DM.AdaptiveLayerNorm(d_token, d_cond)
+_a = adaln(a, s[None])
+assert _a.shape == a.shape, _a.shape
+_a.sum().backward()
+del adaln, _a

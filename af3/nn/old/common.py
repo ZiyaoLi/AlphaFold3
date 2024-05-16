@@ -67,7 +67,7 @@ class Linear(nn.Linear):
     def _adaln_zero_init(self):
         assert self.use_bias, "adaln_zero init requires bias."
         torch.nn.init.kaiming_normal_(self.weight, nonlinearity="linear")
-        with torch.no_grad:
+        with torch.no_grad():
             self.bias.fill_(-2.0)
 
 

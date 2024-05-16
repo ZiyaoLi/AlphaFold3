@@ -86,6 +86,27 @@ class AttentionPairBias(nn.Module):
         return o
 
 
+# alg25 conditional transition
+class ConditionalTransitionBlock(nn.Module):
+    def __init__(
+        self,
+        d_token: int,
+        d_s: int,
+        n: int = 2
+    ) -> None:
+        super().__init__()
+        self.ada_ln = AdaptiveLayerNorm(d_token, d_s)
+        self.w1 = Linear(d_token, n * d_token, bias=False)
+        self.w2 = Linear(d_token, n * d_token, bias=False)
+        self.w3 = Linear(n * d_token, d_token, bias=False)
+        self.wg = Linear(d_s, d_token, init="adaln_zero")
+
+    def forward(self, a, s):
+        a = self.ada_ln(a, s)
+        b = F.silu(self.w1(a)) * self.w2(a)
+        o = torch.sigmoid(self.wg(s)) * self.w3(b)
+        return o
+
 
 # alg26 AdaLN
 class AdaptiveLayerNorm(nn.Module):
@@ -102,4 +123,5 @@ class AdaptiveLayerNorm(nn.Module):
         a = self.norm_a(a)
         s = self.norm_s(s)
         a = torch.sigmoid(self.w_s(s)) * a + self.b_s(s)
+        return a
 
