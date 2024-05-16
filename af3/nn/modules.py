@@ -16,7 +16,79 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from typing import *
-from .old.common import Linear
+from .common import (
+    Linear,
+    one_hot,
+)
+
+
+# alg3 relpos
+# it's seemingly better to do this on CPU.
+# the parameters are removed from this module. 
+# this current module calculates one-hot embeddings only.
+class RelativePositionEncoding(nn.Module):
+    def __init__(self, r_max=32, s_max=2) -> None:
+        super().__init__()
+        self.r_max = r_max
+        self.s_max = s_max
+
+    @property
+    def output_dim(self):
+        # (2r+2) + (2r+2) + 1 + (2s+2)
+        return 4*self.r_max + 2*self.s_max + 7
+
+    def forward(
+        self,
+        features: Dict[str, torch.Tensor],
+        dtype = torch.float,
+    ):
+        asym_id = features["asym_id"]
+        sym_id = features["sym_id"]
+        entity_id = features["entity_id"]
+        token_idx = features["token_index"]
+        res_idx = features["residue_index"]
+
+        def _pair_same(x):
+            return x[..., :, None] == x[..., None, :]
+
+        def _pair_diff(x):
+            return x[..., :, None] - x[..., None, :]
+
+        b_same_chain = _pair_same(asym_id)
+        b_same_res = _pair_same(res_idx) & b_same_chain     # same res must be same chain
+        b_same_entity = _pair_same(entity_id)
+
+        d_res = torch.where(
+            b_same_chain,
+            torch.clip(_pair_diff(res_idx) + self.r_max, min=0, max=2*self.r_max),
+            2*self.r_max+1,
+        )
+        rel_pos = one_hot(d_res, 2*self.r_max+2)
+
+        d_token = torch.where(
+            b_same_res,
+            torch.clip(_pair_diff(token_idx) + self.r_max, min=0, max=2*self.r_max),
+            2*self.r_max+1,
+        )
+        rel_token = one_hot(d_token, 2*self.r_max+2)
+
+        d_chain = torch.where(
+            ~b_same_chain,
+            torch.clip(_pair_diff(sym_id) + self.s_max, min=0, max=2*self.s_max),
+            2*self.s_max+1
+        )
+        rel_chain = one_hot(d_chain, 2*self.s_max+2)
+
+        ret = torch.cat(
+            [rel_pos, rel_token, b_same_entity.float()[..., None], rel_chain], dim=-1
+        ).to(dtype)
+
+        # assert ret.shape[-1] == self.output_dim
+        return ret
+
+
+
+
 
 
 # alg 8 MSA Module

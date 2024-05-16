@@ -18,6 +18,23 @@ import torch.nn.functional as F
 from typing import *
 from .old.common import Linear
 
+# alg21 diffusion conditioning
+class DiffusionConditioning(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(
+        self,
+        t,
+        features: Dict[str, torch.Tensor],
+        s_inputs,
+        s,
+        z,
+        sigma_data,
+    ):
+        pass
+
+
 # alg22 fourier emb
 class FourierEmbedding(nn.Module):
     def __init__(self, dim: int, learnable: bool = True) -> None:

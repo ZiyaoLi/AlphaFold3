@@ -17,14 +17,28 @@ z = torch.randn(*bshape, seq_len, seq_len, d_pair)
 a = torch.randn(n_diff, *bshape, seq_len, d_token)
 s = torch.randn(*bshape, seq_len, d_cond)
 
-print("alg10 pair avg weighting ...")
+print("alg 3 relpos")
+relpos_module = M.RelativePositionEncoding(32, 2)
+input_size = (*bshape, 127)     # larger seqlen for better test
+features = {
+    "asym_id": torch.randint(0, 5, input_size),
+    "sym_id": torch.randint(0, 2, input_size),
+    "entity_id": torch.randint(0, 3, input_size),
+    "token_index": torch.randint(1, 127, input_size),
+    "residue_index": torch.randint(1, 127, input_size),
+}
+rpe = relpos_module(features)
+assert rpe.shape == (*input_size, input_size[-1], relpos_module.output_dim), rpe.shape
+del relpos_module, rpe
+
+print("alg 10 pair avg weighting ...")
 paw_layer = M.PairAverageWeighting(d_msa, d_pair, d_hid=7, num_heads=3)
 _m = paw_layer(m, z)
 assert _m.shape == m.shape, _m.shape
 _m.sum().backward()
 del paw_layer, _m
 
-print("alg11 transition ...")
+print("alg 11 transition ...")
 transition = M.Transition(d_msa, 4)
 _m = transition(m)
 assert _m.shape == m.shape, _m.shape
