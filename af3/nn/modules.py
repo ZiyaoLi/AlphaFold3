@@ -18,6 +18,7 @@ import torch.nn.functional as F
 from typing import *
 from .common import (
     Linear,
+    Transition,
     one_hot,
 )
 
@@ -143,21 +144,6 @@ class PairAverageWeighting(nn.Module):
         o = g * torch.einsum("...ijh,...sjdh->...sidh", w, v)       # *sidh
         return self.o_linear(o.view(*o.shape[:-2], -1))
 
-# alg 11 transition, different to af2
-class Transition(nn.Module):
-    def __init__(self, dim, n):
-        super(Transition, self).__init__()
-        hid_dim = dim * n
-
-        self.layer_norm = nn.LayerNorm(dim)
-        self.wa = Linear(dim, hid_dim, init="relu")
-        self.act = F.silu   # aka swish
-        self.wb = Linear(dim, hid_dim)
-        self.wo = Linear(hid_dim, dim, init="final")
-
-    def forward(self, x):
-        x = self.layer_norm(x)
-        return self.wo(self.act(self.wa(x)) * self.wb(x))
 
 # alg 12 & 13 triangular updates
 from functools import partialmethod

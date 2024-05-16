@@ -5,7 +5,7 @@ from af3.nn import diffusion_modules as DM
 
 bshape = (3, 1)
 n_msa = 15
-seq_len = 31
+seq_len = 127
 d_msa = 29
 d_pair = 13
 n_diff = 7
@@ -20,7 +20,7 @@ s = torch.randn(*bshape, seq_len, d_cond)
 
 print("alg  3 relpos")
 relpos_module = M.RelativePositionEncoding(32, 2)
-input_size = (*bshape, 127)     # larger seqlen for better test
+input_size = (*bshape, seq_len)     # larger seqlen for better test
 features = {
     "asym_id": torch.randint(0, 5, input_size),
     "sym_id": torch.randint(0, 2, input_size),
@@ -30,7 +30,6 @@ features = {
 }
 rpe = relpos_module(features)
 assert rpe.shape == (*input_size, input_size[-1], relpos_module.output_dim), rpe.shape
-del relpos_module, rpe, features
 
 print("alg  4 onehot")
 x = torch.randint(0, 128, input_size)
@@ -87,10 +86,18 @@ assert _z.shape == z.shape, _z.shape
 _z.sum().backward()
 del triangle_att_start, triangle_att_end, _z
 
+print("alg 21 diff cond")
+diff_cond = DM.DiffusionConditioning(d_cond, d_cond, d_cond, d_pair, d_pair, relpos_module.output_dim, 17, 11)
+t = torch.rand(n_diff, *bshape)     # simulate diffusion batch size
+sigma_data = torch.rand(*t.shape)
+_s, _z = diff_cond(
+    t, rpe, s, s, z, sigma_data
+)
+assert _s.shape == (n_diff, *s.shape), _s.shape
+assert _z.shape == z.shape, _z.shape
+
 print("alg 22 fourier emb")
 fourier_emb = DM.FourierEmbedding(257)
-t = torch.rand(*bshape, 47)     # simulate diffusion batch size
-sigma_data = torch.rand(*t.shape)
 t_emb = fourier_emb(t, sigma_data)
 assert t_emb.shape == (*t.shape, 257), t_emb
 t_emb.sum().backward()

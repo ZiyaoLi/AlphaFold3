@@ -65,10 +65,10 @@ class DiffusionConditioning(nn.Module):
         for layer in self.z_transitions:
             z = z + layer(z)
 
-        s = torch.cat([s, s_inputs], dim=-1)
+        s = torch.cat([s, s_inputs], dim=-1)    # *ic
         s = self.ws(self.norm_s(s))
-        t_emb = self.fourier_embedder(t, sigma_data)
-        s = s + self.wn(self.norm_n(t_emb))
+        t_emb = self.fourier_embedder(t, sigma_data)    # D*c
+        s = s[None] + self.wn(self.norm_n(t_emb))[..., None, :]
         for layer in self.s_transitions:
             s = s + layer(s)
 
@@ -215,3 +215,16 @@ class AdaptiveLayerNorm(nn.Module):
         a = torch.sigmoid(self.w_s(s)) * a + self.b_s(s)
         return a
 
+
+# alg7 atom transformer
+class AtomTransformer(DiffusionTransformer):
+    def __init__(
+        self,
+        d_token: int,
+        d_pair: int,
+        d_s: int,
+        num_blocks: int = 3,
+        num_heads: int = 4,
+        n_transition: int = 2,
+    ) -> None:
+        super().__init__(num_blocks, d_token, d_pair, d_s, num_heads, n_transition)
