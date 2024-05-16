@@ -141,19 +141,3 @@ from .old.attentions import (
     TriangleAttentionEnding
 )
 
-# alg26 AdaLN
-
-class AdaptiveLayerNorm(nn.Module):
-    # TODO understand what is going on. impl. as-is.
-    def __init__(self, d_a, d_s) -> None:
-        super().__init__()
-        self.norm_a = nn.LayerNorm(d_a, elementwise_affine=False)
-        self.norm_s = nn.LayerNorm(d_s)
-        self.norm_s.bias.requires_grad_(False)
-        self.w_s = Linear(d_s, d_a, init="gating")
-        self.b_s = Linear(d_s, d_a, bias=False, init="final")
-
-    def forward(self, a, s):
-        a = self.norm_a(a)
-        s = self.norm_s(s)
-        a = torch.sigmoid(self.w_s(s)) * a + self.b_s(s)

@@ -1,5 +1,6 @@
 import torch
 from af3.nn import modules as M
+from af3.nn import diffusion_modules as DM
 
 bshape = (3, 1)
 n_msa = 15
@@ -46,3 +47,12 @@ _z = triangle_att_end(z)
 assert _z.shape == z.shape, _z.shape
 _z.sum().backward()
 del triangle_att_start, triangle_att_end, _z
+
+print("alg 22 fourier emb")
+fourier_emb = DM.FourierEmbedding(257)
+t = torch.rand(*bshape, 47)     # simulate diffusion batch size
+t_emb = fourier_emb(t)
+assert t_emb.shape == (*t.shape, 257), t_emb
+t_emb.sum().backward()
+del fourier_emb, t_emb
+

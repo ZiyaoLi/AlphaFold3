@@ -38,6 +38,8 @@ class Linear(nn.Linear):
             self._normal_init()
         elif init == "final":
             self._zero_init(False)
+        elif init == "adaln_zero":
+            self._adaln_zero_init()
         else:
             raise ValueError("Invalid init method.")
 
@@ -61,6 +63,12 @@ class Linear(nn.Linear):
 
     def _normal_init(self):
         torch.nn.init.kaiming_normal_(self.weight, nonlinearity="linear")
+
+    def _adaln_zero_init(self):
+        assert self.use_bias, "adaln_zero init requires bias."
+        torch.nn.init.kaiming_normal_(self.weight, nonlinearity="linear")
+        with torch.no_grad:
+            self.bias.fill_(-2.0)
 
 
 class Transition(nn.Module):
