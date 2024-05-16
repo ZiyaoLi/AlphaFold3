@@ -106,6 +106,13 @@ assert _a.shape == a.shape, _a.shape
 _a.sum().backward()
 del diff_tfm, _a
 
+print("alg 24 att pair bias")
+att_pair_bias = DM.AttentionPairBias(d_token, d_pair, d_cond, num_heads=3)
+_a = att_pair_bias(a, s, z, beta)
+assert _a.shape == a.shape, _a.shape
+_a.sum().backward()
+del att_pair_bias, _a
+
 print("alg 25 cond trans blk")
 cond_trans_blk = DM.ConditionalTransitionBlock(d_token, d_cond)
 _a = cond_trans_blk(a, s[None])
