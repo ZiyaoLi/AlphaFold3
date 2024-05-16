@@ -175,18 +175,19 @@ class OuterProductMean(nn.Module):
     ) -> torch.Tensor:
 
         m = self.layer_norm(m)
-        mask = mask.unsqueeze(-1)
-        if self.layer_norm_out is not None:
-            # for numerical stability
-            mask = mask * (mask.size(-2) ** -0.5)
         a = self.linear_1(m)
         b = self.linear_2(m)
-        if self.training:
-            a = a * mask
-            b = b * mask
-        else:
-            a *= mask
-            b *= mask
+        if mask is not None:
+            mask = mask.unsqueeze(-1)
+            if self.layer_norm_out is not None:
+                # for numerical stability
+                mask = mask * (mask.size(-2) ** -0.5)
+            if self.training:
+                a = a * mask
+                b = b * mask
+            else:
+                a *= mask
+                b *= mask
 
         a = a.transpose(-2, -3)
         b = b.transpose(-2, -3)
@@ -196,8 +197,9 @@ class OuterProductMean(nn.Module):
         else:
             z = self._opm(a, b)
 
-        norm = torch.einsum("...abc,...adc->...bdc", mask, mask)
-        z /= self.eps + norm
+        if mask is not None:
+            norm = torch.einsum("...abc,...adc->...bdc", mask, mask)
+            z /= self.eps + norm
         if self.layer_norm_out is not None:
             z = self.act(z)
             z = self.layer_norm_out(z)
