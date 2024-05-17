@@ -18,6 +18,31 @@ import torch.nn.functional as F
 from typing import *
 from .common import Linear, SimpleModuleList
 from .modules import Transition
+from .utils import uniform_random_rotation, gaussian_random_translation
+
+# alg19 centre rand aug
+class CentreRandomAugmentation(nn.Module):
+    def __init__(self, translation_scale: float = 1.) -> None:
+        super().__init__()
+        self.translation_scale = translation_scale
+
+    def forward(self, x: torch.Tensor, batch_dim=0, seed=None):
+        x = x - x.mean(dim=-2, keepdim=True)
+        # diffusion batch size
+        rand_size = x.shape[batch_dim]
+        rot = uniform_random_rotation(
+            rand_size, x.dtype, x.device, seed)
+        trans = gaussian_random_translation(
+            rand_size, self.translation_scale, x.dtype, x.device, seed)
+        # expand random transformations to input shape
+        expand_shape = [1 for _ in x.shape[:-1]]
+        expand_shape[batch_dim] = rand_size
+        rot = rot.view(*expand_shape, 3, 3)
+        trans = trans.view(*expand_shape, 3)
+        # apply them
+        x = (rot @ x[..., None]).squeeze(-1) + trans
+        return x
+
 
 # alg21 diffusion conditioning
 class DiffusionConditioning(nn.Module):

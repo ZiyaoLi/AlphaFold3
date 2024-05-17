@@ -1,3 +1,17 @@
+# Copyright 2024 Li, Ziyao
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import torch
 from af3.nn import common
 from af3.nn import modules as M
@@ -6,6 +20,7 @@ from af3.nn import diffusion_modules as DM
 bshape = (3, 1)
 n_msa = 15
 seq_len = 127
+n_token = 149
 d_msa = 29
 d_pair = 13
 n_diff = 7
@@ -85,6 +100,18 @@ _z = triangle_att_end(z)
 assert _z.shape == z.shape, _z.shape
 _z.sum().backward()
 del triangle_att_start, triangle_att_end, _z
+
+print("alg 19 center rand aug")
+rand_aug = DM.CentreRandomAugmentation()
+x = torch.randn(n_diff, *bshape, n_token, 3)
+_x = rand_aug(x, batch_dim=0, seed=42)
+assert _x.shape == x.shape, _x.shape
+def _pair_dist(x):
+    return (x[..., None, :, :] - x[..., :, None, :]).norm(dim=-1)
+dx = _pair_dist(x)
+_dx = _pair_dist(_x)
+assert torch.all(torch.abs(dx - _dx) < 1e-3)
+del _x, dx, _dx
 
 print("alg 21 diff cond")
 diff_cond = DM.DiffusionConditioning(d_cond, d_cond, d_cond, d_pair, d_pair, relpos_module.output_dim, 17, 11)
