@@ -101,6 +101,9 @@ class MSAModuleBlock(nn.Module):
         d_opm_hid: int = 32,
         d_paw_hid: int = 8,     # inconsistent in alg8 (8) and alg10 (32), using alg8.
         num_paw_heads: int = 8,
+        d_tri_mul_hid: int = 128,       # alg 12 & 13
+        d_tri_att_hid: int = 32,        # alg 14 & 15
+        num_tri_att_heads: int = 4,
         n_transition: int = 4,
         dropout_msa: float = 0.15,
         dropout_pair: float = 0.25,
@@ -108,6 +111,13 @@ class MSAModuleBlock(nn.Module):
         super().__init__()
         self.opm = OuterProductMean(d_msa, d_pair, d_opm_hid)
         self.paw = PairAverageWeighting(d_msa, d_pair, d_paw_hid, num_paw_heads)
+        self.tri_out = TriangleMultiplicationOutgoing(d_pair, d_tri_mul_hid)
+        self.tri_in = TriangleMultiplicationIncoming(d_pair, d_tri_mul_hid)
+        self.tri_att_start = TriangleAttentionStarting(d_pair, d_tri_att_hid)
+        self.tri_att_end = TriangleAttentionEnding(d_pair, d_tri_att_hid, num_tri_att_heads)
+        self.transition = Transition(d_pair, n_transition)
+        self.dropout_msa = dropout_msa
+        self.dropout_pair = dropout_pair
 
     def forward(self):
         pass
